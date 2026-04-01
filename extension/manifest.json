@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Zoom Recorder MVP",
+  "description": "Record browser videos and export follow-cursor zoom clips.",
+  "version": "0.1.0",
+  "action": {
+    "default_title": "Zoom Recorder"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["activeTab", "downloads", "storage", "tabs", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

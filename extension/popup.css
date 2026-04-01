@@ -1,0 +1,89 @@
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  width: 360px;
+  background: linear-gradient(165deg, #f4f9ff, #fff8ef 60%, #eefbf3);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #11223a;
+}
+
+.app {
+  padding: 14px;
+}
+
+.header h1 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.header p {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: #465a73;
+}
+
+.controls,
+.exports {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.settings {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.settings label {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+  color: #42526a;
+}
+
+.btn {
+  border: 1px solid #294b76;
+  border-radius: 10px;
+  background: #ffffffcc;
+  color: #153b66;
+  font-weight: 700;
+  padding: 9px 11px;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #134a87;
+  border-color: #134a87;
+  color: #fff;
+}
+
+.btn-danger {
+  background: #b12d43;
+  border-color: #b12d43;
+  color: #fff;
+}
+
+.status {
+  margin: 4px 0 6px;
+  font-size: 12px;
+  color: #173a5f;
+}
+
+.hint {
+  margin: 0;
+  font-size: 11px;
+  color: #6a7488;
+}

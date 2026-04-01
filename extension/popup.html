@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zoom Recorder</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="header">
+        <h1>Zoom Recorder</h1>
+        <p>Record current tab and export cursor-follow zoom.</p>
+      </header>
+
+      <section class="controls">
+        <button id="startBtn" class="btn btn-primary">Start Recording</button>
+        <button id="stopBtn" class="btn btn-danger" disabled>Stop Recording</button>
+      </section>
+
+      <section class="settings">
+        <label>
+          Base zoom
+          <input id="zoomInput" type="range" min="1" max="2.5" step="0.1" value="1.6" />
+        </label>
+        <label>
+          Click boost
+          <input id="clickBoostInput" type="range" min="0" max="1" step="0.05" value="0.35" />
+        </label>
+      </section>
+
+      <section class="exports">
+        <button id="downloadRawBtn" class="btn" disabled>Download Raw</button>
+        <button id="renderBtn" class="btn" disabled>Render Zoomed Export</button>
+      </section>
+
+      <p id="status" class="status">Ready.</p>
+      <p class="hint">
+        Keep this popup open while recording. This is an MVP implementation.
+      </p>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zoom Recorder - Record</title>
+    <link rel="stylesheet" href="recorder.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="panel hero">
+        <p class="brand">zoom recorder</p>
+        <h1>Record your browser in three steps</h1>
+      </section>
+
+      <section class="panel step">
+        <div class="num">1</div>
+        <div>
+          <h2>Share this screen</h2>
+          <p>Select the tab/window/screen you want to record.</p>
+          <div class="media-grid">
+            <button id="shareBtn" class="media-card">
+              <span class="title">Select screen</span>
+              <span class="sub" id="shareState">Not shared yet</span>
+            </button>
+            <button id="micBtn" class="media-card">
+              <span class="title">Select microphone</span>
+              <span class="sub" id="micState">Off</span>
+            </button>
+            <div class="media-card disabled">
+              <span class="title">Camera</span>
+              <span class="sub">Coming soon</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel step">
+        <div class="num">2</div>
+        <div>
+          <h2>Adjust auto-zoom</h2>
+          <p>Fine-tune follow-cursor behavior before export.</p>
+          <div class="sliders">
+            <label>
+              Idle zoom
+              <input id="zoomInput" type="range" min="1" max="1.8" step="0.05" value="1.05" />
+            </label>
+            <label>
+              Click boost
+              <input id="clickBoostInput" type="range" min="0" max="1.8" step="0.05" value="0.95" />
+            </label>
+            <label>
+              Smoothness
+              <input id="smoothnessInput" type="range" min="0" max="100" step="1" value="78" />
+            </label>
+            <label>
+              Zoom delay (s)
+              <input id="zoomDelayInput" type="range" min="0" max="0.8" step="0.02" value="0.08" />
+            </label>
+            <label>
+              Zoom in duration (s)
+              <input id="zoomInInput" type="range" min="0.05" max="0.7" step="0.01" value="0.2" />
+            </label>
+            <label>
+              Zoom hold (s)
+              <input id="zoomHoldInput" type="range" min="0.2" max="3" step="0.05" value="1.6" />
+            </label>
+            <label>
+              Zoom out duration (s)
+              <input id="zoomOutInput" type="range" min="0.2" max="3" step="0.05" value="1.3" />
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel step start">
+        <div class="num">3</div>
+        <div>
+          <h2>Start recording</h2>
+          <p>
+            You can start here, automatically jump back to your source tab, and stop recording
+            from this page later.
+          </p>
+          <div class="actions">
+            <button id="startBtn" class="btn primary" disabled>Start recording</button>
+            <button id="stopBtn" class="btn danger" disabled>Stop recording</button>
+          </div>
+          <p id="status" class="status">Ready.</p>
+          <p class="status secondary">
+            Timer: <span id="timer">00:00</span>
+          </p>
+        </div>
+      </section>
+
+      <section id="editorPanel" class="panel editor" hidden>
+        <h3>Video preview editor</h3>
+        <p class="editor-sub">
+          Review your recording, scrub through the timeline, then export raw or zoomed output.
+        </p>
+        <video id="previewVideo" controls playsinline></video>
+        <p id="previewMeta" class="meta"></p>
+        <p id="previewKind" class="meta strong"></p>
+        <div class="actions">
+          <button id="refreshPreviewBtn" class="btn" disabled>Update Zoom Preview</button>
+          <button id="downloadRawBtn" class="btn" disabled>Download Raw</button>
+          <button id="renderBtn" class="btn" disabled>Render Zoomed Export</button>
+        </div>
+      </section>
+    </main>
+    <script src="recorder.js"></script>
+  </body>
+</html>
