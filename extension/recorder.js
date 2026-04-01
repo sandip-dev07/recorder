@@ -16,6 +16,16 @@ const zoomDelayInput = document.getElementById("zoomDelayInput");
 const zoomInInput = document.getElementById("zoomInInput");
 const zoomHoldInput = document.getElementById("zoomHoldInput");
 const zoomOutInput = document.getElementById("zoomOutInput");
+const bgStyleInput = document.getElementById("bgStyleInput");
+const bgColorAInput = document.getElementById("bgColorAInput");
+const bgColorBInput = document.getElementById("bgColorBInput");
+const bgAngleInput = document.getElementById("bgAngleInput");
+const videoScaleInput = document.getElementById("videoScaleInput");
+const borderRadiusInput = document.getElementById("borderRadiusInput");
+const borderWidthInput = document.getElementById("borderWidthInput");
+const borderColorInput = document.getElementById("borderColorInput");
+const frameShadowInput = document.getElementById("frameShadowInput");
+const enhancedCursorInput = document.getElementById("enhancedCursorInput");
 const editorPanel = document.getElementById("editorPanel");
 const previewVideo = document.getElementById("previewVideo");
 const previewMeta = document.getElementById("previewMeta");
@@ -24,6 +34,7 @@ const previewKind = document.getElementById("previewKind");
 const TARGET_WIDTH = 1920;
 const TARGET_HEIGHT = 1080;
 const TARGET_FPS = 60;
+const CLICK_DEBOUNCE_SECONDS = 3;
 
 const params = new URLSearchParams(window.location.search);
 const sourceTabIdValue = params.get("sourceTabId");
@@ -70,6 +81,16 @@ function getRenderOptions() {
     zoomInDuration: Number(zoomInInput.value),
     zoomHoldDuration: Number(zoomHoldInput.value),
     zoomOutDuration: Number(zoomOutInput.value),
+    bgStyle: bgStyleInput.value,
+    bgColorA: bgColorAInput.value,
+    bgColorB: bgColorBInput.value,
+    bgAngle: Number(bgAngleInput.value),
+    videoScale: Number(videoScaleInput.value),
+    borderRadius: Number(borderRadiusInput.value),
+    borderWidth: Number(borderWidthInput.value),
+    borderColor: borderColorInput.value,
+    frameShadow: Boolean(frameShadowInput.checked),
+    enhancedCursor: Boolean(enhancedCursorInput.checked),
     maxZoom: 2.7,
   };
 }
@@ -231,6 +252,86 @@ function coalesceClicks(clickPoints, minGapSeconds = 0.45) {
   return result;
 }
 
+function getDestinationRect(width, height, scalePercent) {
+  const scale = clamp((Number(scalePercent) || 100) / 100, 0.4, 1);
+  const w = width * scale;
+  const h = height * scale;
+  return {
+    x: (width - w) / 2,
+    y: (height - h) / 2,
+    w,
+    h,
+  };
+}
+
+function mapWorldToCanvas(pointX, pointY, sourceRect, destinationRect) {
+  const nx = (pointX - sourceRect.sx) / sourceRect.sourceWidth;
+  const ny = (pointY - sourceRect.sy) / sourceRect.sourceHeight;
+  return {
+    x: destinationRect.x + nx * destinationRect.w,
+    y: destinationRect.y + ny * destinationRect.h,
+  };
+}
+
+function roundedRectPath(ctx, x, y, w, h, r) {
+  const radius = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+}
+
+function createPointerSampler(events, width, height, smoothness) {
+  const ordered = [...events]
+    .filter((event) => typeof event.t === "number")
+    .sort((a, b) => a.t - b.t)
+    .map((event) => ({
+      t: event.t,
+      x: (event.x / Math.max(1, event.vw)) * width,
+      y: (event.y / Math.max(1, event.vh)) * height,
+    }));
+
+  let idx = 0;
+  let smoothX = ordered[0]?.x ?? width / 2;
+  let smoothY = ordered[0]?.y ?? height / 2;
+  let lastT = null;
+
+  return {
+    get(t) {
+      while (idx + 1 < ordered.length && ordered[idx + 1].t <= t) {
+        idx += 1;
+      }
+
+      const a = ordered[idx];
+      const b = ordered[idx + 1];
+      let rawX = width / 2;
+      let rawY = height / 2;
+      if (a && b) {
+        const span = Math.max(0.001, b.t - a.t);
+        const ratio = clamp((t - a.t) / span, 0, 1);
+        rawX = a.x + (b.x - a.x) * ratio;
+        rawY = a.y + (b.y - a.y) * ratio;
+      } else if (a) {
+        rawX = a.x;
+        rawY = a.y;
+      }
+
+      const dt = lastT == null ? 1 / TARGET_FPS : Math.max(1 / 240, t - lastT);
+      lastT = t;
+      const s = clamp(smoothness, 0, 100) / 100;
+      const tau = 0.03 + s * 0.12;
+      const alpha = 1 - Math.exp(-dt / tau);
+      smoothX += (rawX - smoothX) * alpha;
+      smoothY += (rawY - smoothY) * alpha;
+
+      return { x: smoothX, y: smoothY };
+    },
+  };
+}
+
 function createAutoCameraEngine(events, width, height, options) {
   const config = {
     idleZoom: Math.max(1, Number(options.idleZoom) || 1),
@@ -253,7 +354,8 @@ function createAutoCameraEngine(events, width, height, options) {
       x: (event.x / Math.max(1, event.vw)) * width,
       y: (event.y / Math.max(1, event.vh)) * height,
     }));
-  const filteredClicks = coalesceClicks(clickPoints, 0.45);
+  // Fixed debounce to prevent rapid overlapping click-triggered zoom cycles.
+  const filteredClicks = coalesceClicks(clickPoints, CLICK_DEBOUNCE_SECONDS);
   const clickTimes = filteredClicks.map((point) => point.t);
   let pointerIndex = 0;
 
@@ -442,6 +544,12 @@ async function renderZoomedVideo(rawBlob, sessionData, options) {
     zoomOutDuration: options.zoomOutDuration,
     maxZoom: options.maxZoom,
   });
+  const pointerSampler = createPointerSampler(
+    sessionData.events || [],
+    width,
+    height,
+    options.smoothness
+  );
   const canvasStream = canvas.captureStream(TARGET_FPS);
   const videoStream = video.captureStream();
   for (const audioTrack of videoStream.getAudioTracks()) {
@@ -465,13 +573,39 @@ async function renderZoomedVideo(rawBlob, sessionData, options) {
         y: (event.y / Math.max(1, event.vh)) * height,
       }))
       .sort((a, b) => a.t - b.t),
-    0.45
+    CLICK_DEBOUNCE_SECONDS
   );
   const clickFadeSeconds = 0.52;
   let nextClickIndex = 0;
   const activeClicks = [];
+  const backgroundRect = { x: 0, y: 0, w: width, h: height };
 
-  function drawClickEffects(frameTime, sourceRect) {
+  function drawBackground() {
+    if (options.bgStyle === "gradient") {
+      const angle = ((Number(options.bgAngle) || 0) * Math.PI) / 180;
+      const cx = width / 2;
+      const cy = height / 2;
+      const len = Math.max(width, height);
+      const x0 = cx - Math.cos(angle) * len;
+      const y0 = cy - Math.sin(angle) * len;
+      const x1 = cx + Math.cos(angle) * len;
+      const y1 = cy + Math.sin(angle) * len;
+      const grad = ctx.createLinearGradient(x0, y0, x1, y1);
+      grad.addColorStop(0, options.bgColorA || "#0f172a");
+      grad.addColorStop(1, options.bgColorB || "#1d4ed8");
+      ctx.fillStyle = grad;
+      ctx.fillRect(backgroundRect.x, backgroundRect.y, backgroundRect.w, backgroundRect.h);
+      return;
+    }
+    if (options.bgStyle === "solid") {
+      ctx.fillStyle = options.bgColorA || "#0f172a";
+      ctx.fillRect(backgroundRect.x, backgroundRect.y, backgroundRect.w, backgroundRect.h);
+      return;
+    }
+    ctx.clearRect(0, 0, width, height);
+  }
+
+  function drawClickEffects(frameTime, sourceRect, destinationRect) {
     while (nextClickIndex < clickEvents.length && clickEvents[nextClickIndex].t <= frameTime) {
       activeClicks.push(clickEvents[nextClickIndex]);
       nextClickIndex += 1;
@@ -490,8 +624,9 @@ async function renderZoomedVideo(rawBlob, sessionData, options) {
       const baseRadius = 14 + eased * 46;
       const alpha = 0.55 * (1 - eased);
 
-      const rx = ((click.x - sourceRect.sx) / sourceRect.sourceWidth) * width;
-      const ry = ((click.y - sourceRect.sy) / sourceRect.sourceHeight) * height;
+      const mapped = mapWorldToCanvas(click.x, click.y, sourceRect, destinationRect);
+      const rx = mapped.x;
+      const ry = mapped.y;
 
       if (rx < -80 || rx > width + 80 || ry < -80 || ry > height + 80) {
         continue;
@@ -512,25 +647,101 @@ async function renderZoomedVideo(rawBlob, sessionData, options) {
     }
   }
 
+  function drawEnhancedCursor(frameTime, sourceRect, destinationRect) {
+    if (!options.enhancedCursor) {
+      return;
+    }
+    const point = pointerSampler.get(frameTime);
+    const mapped = mapWorldToCanvas(point.x, point.y, sourceRect, destinationRect);
+    const x = mapped.x;
+    const y = mapped.y;
+    if (x < -40 || x > width + 40 || y < -40 || y > height + 40) {
+      return;
+    }
+
+    const pulse = 1 + 0.08 * Math.sin(frameTime * 8);
+    ctx.save();
+    ctx.globalAlpha = 0.32;
+    const halo = ctx.createRadialGradient(x, y, 2, x, y, 34 * pulse);
+    halo.addColorStop(0, "rgba(99, 179, 237, 0.55)");
+    halo.addColorStop(1, "rgba(99, 179, 237, 0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(x, y, 34 * pulse, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = 0.85;
+    ctx.strokeStyle = "rgba(148, 214, 255, 0.95)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 10, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   let rafId = 0;
   const drawLoop = () => {
     const t = video.currentTime;
     const frame = camera.getFrame(t);
+    const destinationRect = getDestinationRect(width, height, options.videoScale);
+    const borderRadius = Math.max(0, Number(options.borderRadius) || 0);
+    const borderWidth = Math.max(0, Number(options.borderWidth) || 0);
+    const useFrame = destinationRect.w < width || destinationRect.h < height || borderWidth > 0;
 
-    ctx.clearRect(0, 0, width, height);
+    drawBackground();
+
+    if (useFrame && options.frameShadow) {
+      ctx.save();
+      ctx.shadowColor = "rgba(15, 23, 42, 0.35)";
+      ctx.shadowBlur = 30;
+      ctx.shadowOffsetY = 12;
+      roundedRectPath(ctx, destinationRect.x, destinationRect.y, destinationRect.w, destinationRect.h, borderRadius);
+      ctx.fillStyle = "rgba(0,0,0,0.12)";
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.save();
+    roundedRectPath(
+      ctx,
+      destinationRect.x,
+      destinationRect.y,
+      destinationRect.w,
+      destinationRect.h,
+      borderRadius
+    );
+    ctx.clip();
     ctx.drawImage(
       video,
       frame.sx,
       frame.sy,
       frame.sourceWidth,
       frame.sourceHeight,
-      0,
-      0,
-      width,
-      height
+      destinationRect.x,
+      destinationRect.y,
+      destinationRect.w,
+      destinationRect.h
     );
+    ctx.restore();
 
-    drawClickEffects(t, frame);
+    if (borderWidth > 0) {
+      ctx.save();
+      roundedRectPath(
+        ctx,
+        destinationRect.x,
+        destinationRect.y,
+        destinationRect.w,
+        destinationRect.h,
+        borderRadius
+      );
+      ctx.lineWidth = borderWidth;
+      ctx.strokeStyle = options.borderColor || "#ffffff";
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    drawClickEffects(t, frame, destinationRect);
+    drawEnhancedCursor(t, frame, destinationRect);
 
     rafId = requestAnimationFrame(drawLoop);
   };
@@ -837,6 +1048,16 @@ zoomDelayInput.addEventListener("input", invalidateZoomPreviewCache);
 zoomInInput.addEventListener("input", invalidateZoomPreviewCache);
 zoomHoldInput.addEventListener("input", invalidateZoomPreviewCache);
 zoomOutInput.addEventListener("input", invalidateZoomPreviewCache);
+bgStyleInput.addEventListener("change", invalidateZoomPreviewCache);
+bgColorAInput.addEventListener("input", invalidateZoomPreviewCache);
+bgColorBInput.addEventListener("input", invalidateZoomPreviewCache);
+bgAngleInput.addEventListener("input", invalidateZoomPreviewCache);
+videoScaleInput.addEventListener("input", invalidateZoomPreviewCache);
+borderRadiusInput.addEventListener("input", invalidateZoomPreviewCache);
+borderWidthInput.addEventListener("input", invalidateZoomPreviewCache);
+borderColorInput.addEventListener("input", invalidateZoomPreviewCache);
+frameShadowInput.addEventListener("change", invalidateZoomPreviewCache);
+enhancedCursorInput.addEventListener("change", invalidateZoomPreviewCache);
 
 window.addEventListener("beforeunload", () => {
   stopTracks(state.displayStream);

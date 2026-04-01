@@ -69,6 +69,50 @@
               Zoom out duration (s)
               <input id="zoomOutInput" type="range" min="0.2" max="3" step="0.05" value="1.3" />
             </label>
+            <label>
+              Background style
+              <select id="bgStyleInput">
+                <option value="none">None</option>
+                <option value="solid">Solid</option>
+                <option value="gradient" selected>Gradient</option>
+              </select>
+            </label>
+            <label>
+              Background color A
+              <input id="bgColorAInput" type="color" value="#0f172a" />
+            </label>
+            <label>
+              Background color B
+              <input id="bgColorBInput" type="color" value="#1d4ed8" />
+            </label>
+            <label>
+              Gradient angle (deg)
+              <input id="bgAngleInput" type="range" min="0" max="360" step="1" value="145" />
+            </label>
+            <label>
+              Video scale (%)
+              <input id="videoScaleInput" type="range" min="60" max="100" step="1" value="90" />
+            </label>
+            <label>
+              Border radius (px)
+              <input id="borderRadiusInput" type="range" min="0" max="64" step="1" value="18" />
+            </label>
+            <label>
+              Border width (px)
+              <input id="borderWidthInput" type="range" min="0" max="24" step="1" value="2" />
+            </label>
+            <label>
+              Border color
+              <input id="borderColorInput" type="color" value="#ffffff" />
+            </label>
+            <label>
+              <input id="frameShadowInput" type="checkbox" checked />
+              Add frame shadow
+            </label>
+            <label>
+              <input id="enhancedCursorInput" type="checkbox" checked />
+              Enhanced cursor visualization
+            </label>
           </div>
         </div>
       </section>
