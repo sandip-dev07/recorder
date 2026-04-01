@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Zoom Recorder MVP
+
+Chrome extension MVP that records the active tab, tracks cursor/click events, and exports a follow-cursor zoomed video.
 
 ## Getting Started
 
-First, run the development server:
+Run the web dashboard:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Load the Extension (Unpacked)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Open `chrome://extensions`.
+2. Enable **Developer mode**.
+3. Click **Load unpacked**.
+4. Select the `extension/` folder from this repo.
 
-## Learn More
+## Record and Export
 
-To learn more about Next.js, take a look at the following resources:
+1. Open the tab you want to record.
+2. Click the extension icon (this opens `recorder.html` in a new tab).
+3. Click **Select screen** and choose what to capture.
+4. Press **Start recording**.
+5. Press **Stop recording**.
+6. Download **Raw** or **Render Zoomed Export**.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Current MVP Limitations
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Recorder runs in an extension tab.
+- Export format is WebM.
+- Zoom rendering is local and real-time in browser, so longer recordings may take time.
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `extension/manifest.json`: MV3 manifest
+- `extension/background.js`: session state and cursor-event aggregation
+- `extension/content.js`: in-page cursor and click tracking
+- `extension/recorder.*`: full-page recorder UI and zoom export pipeline
+- `app/`: Next.js dashboard page with setup instructions
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Next Steps
+
+- Move recording lifecycle to an offscreen document for robust long recordings.
+- Add trimming and keyframe editing UI.
+- Add MP4 export via backend or companion desktop renderer.
